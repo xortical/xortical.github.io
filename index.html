@@ -1,21 +1,35 @@
 <!DOCTYPE html>
-<!DOCTYPE html>
 <html>
 
 <head>
   <title>Web3 Metamask Login</title>
   <link href="https://unpkg.com/tailwindcss@^2/dist/tailwind.min.css" rel="stylesheet">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
   <style>
+    
     body {
+
+      width: 100%;
+      height: 100%;
       background-image: url('resources/background.jpg');
       background-repeat: no-repeat;
       background-size: cover;
+      overflow: hidden;
     }
-    </style> 
+
+
+  </style>
+
 </head>
 
-<body class="flex w-screen h-screen justify-center items-center">
-  <div class="flex-col space-y-2 justify-center items-center">
+<body>
+
+
+  <div class="jumbotron text-center">
+    <p><a style = " white-space:nowrap; " href="https://opensea.io/xortical">NFT</a> holders can vote on life choices of Dr. Xortical</p>
     <button id='loginButton' onclick="" class="mx-auto rounded-md p-2 bg-purple-500 text-white">
       Login with MetaMask
     </button>
