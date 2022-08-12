@@ -1,1 +1,0 @@
-# xortical.github.io
