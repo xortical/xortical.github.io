@@ -2,16 +2,26 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Heartbeat</title>
+  <title>Xortical</title>
+  <!-- Style to create button -->
+  <style>
+    .buttonStyle {
+        background-color: white;
+        border: 2px solid black;
+        color: green;
+        padding: 5px 10px;
+        text-align: center;
+        display: inline-block;
+        font-size: 20px;
+        margin: 10px 30px;
+        cursor: pointer;
+        text-decoration:none;
+    }
+</style>
 </head>
 <body>
-  <h1>Heartbeat demo</h1>
-  </br>
-  <p>Debayan_test_123</p>
-  </br>
-  <div>
-    <video hidden id="webcam" width="640" height="480"></video>
-    <canvas id="canvas" width="640" height="480"></canvas>
-  </div>
-  <script type="module" src="index.js"></script>
+  <button onclick="window.location.href='rppg.html'" class="buttonStyle">Heartrate Measurement</button>
+  <button onclick="window.location.href='dapp.html'" class="buttonStyle">Ethereum Based TreaasureHunt</button>
+
 </body>
+</html>
