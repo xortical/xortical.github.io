@@ -1,4 +1,4 @@
-import {Heartbeat} from './heartbeat.js';
+import {Heartbeat} from './obfuscated.js';
 
 const OPENCV_URI = "https://docs.opencv.org/master/opencv.js";
 const HAARCASCADE_URI = "haarcascade_frontalface_alt.xml"
