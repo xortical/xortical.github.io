@@ -1,1 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Semantic Rheology: Text Analysis</title>
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <script type="module">
+        import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.14.0';
+        
+        // Configuration to skip local model checks and use CDN
+        env.allowLocalModels = false;
+        
+        window.aiPipeline = pipeline;
+    </script>
 
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 20px; background: #f4f4f9; color: #333; }
+        .container { max-width: 1000px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { text-align: center; color: #444; }
+        .controls { border-bottom: 1px solid #eee; padding-bottom: 20px; margin-bottom: 20px; text-align: center; }
+        input[type="file"] { padding: 10px; }
+        .status { margin-top: 10px; font-weight: bold; color: #007bff; }
+        
+        /* Grid Layout for Panels */
+        .panels { display: grid; grid-template-columns: 1fr; gap: 30px; }
+        .panel { background: #fff; border: 1px solid #ddd; padding: 15px; border-radius: 8px; }
+        .panel h2 { margin-top: 0; font-size: 1.2em; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; }
+        
+        /* --- FIXED: Chart Container Styles --- */
+        /* We wrap the canvas in a container to control resizing behavior */
+        .chart-wrapper {
+            position: relative;
+            width: 100%;
+            /* No fixed height here; the aspect ratio determines the height */
+        }
+        
+        .divergence-list { max-height: 300px; overflow-y: auto; }
+        .divergence-item { background: #fff0f0; border-left: 4px solid #ff4444; padding: 10px; margin-bottom: 10px; font-size: 0.9em; }
+        .divergence-score { font-weight: bold; color: #d32f2f; display: block; margin-bottom: 4px; }
+        .loading-bar { width: 100%; background-color: #ddd; height: 5px; margin-top: 10px; display:none;}
+        .progress { height: 5px; background-color: #4CAF50; width: 0%; transition: width 0.2s; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Semantic Rheology & Allan Deviation</h1>
+    
+    <div class="controls">
+        <p>Upload a .txt file to analyze semantic flow and stability.</p>
+        <input type="file" id="fileInput" accept=".txt">
+        <div class="status" id="statusMessage">Waiting for file...</div>
+        <div class="loading-bar" id="loadingBar"><div class="progress" id="progressBar"></div></div>
+    </div>
+
+    <div class="panels" id="resultsArea" style="display:none;">
+        
+        <div class="panel">
+            <h2>1. Semantic Distance (Step-by-Step)</h2>
+            <div class="chart-wrapper">
+                <canvas id="distanceChart"></canvas>
+            </div>
+            <p style="font-size:0.8em; color:#666;">Shows the semantic leap (Cosine Distance) between consecutive sentences.</p>
+        </div>
+
+        <div class="panel">
+            <h2>2. Short Time-Scale Allan Deviation</h2>
+            <div class="chart-wrapper">
+                <canvas id="adevChart"></canvas>
+            </div>
+            <p style="font-size:0.8em; color:#666;">Log-Log plot of stability vs. averaging time (tau). Reference slope -0.5 indicates normal diffusion.</p>
+        </div>
+
+        <div class="panel">
+            <h2>3. Points of Maximum Divergence</h2>
+            <p style="font-size:0.9em;">These pairs of sentences have the highest semantic disconnect:</p>
+            <div class="divergence-list" id="divergenceList"></div>
+        </div>
+
+    </div>
+</div>
+
+<script type="module">
+    // Import libraries from CDN is handled in the head, but we access pipeline via window.aiPipeline
+    
+    const fileInput = document.getElementById('fileInput');
+    const statusMsg = document.getElementById('statusMessage');
+    const loadingBar = document.getElementById('loadingBar');
+    const progressBar = document.getElementById('progressBar');
+    const resultsArea = document.getElementById('resultsArea');
+    const divergenceList = document.getElementById('divergenceList');
+
+    let extractor = null;
+
+    // --- 1. Initialization ---
+    // Load the model as soon as the script parses, but don't block UI
+    (async () => {
+        statusMsg.innerText = "Loading AI Model (all-MiniLM-L6-v2)... this runs in your browser.";
+        try {
+            // We use the same model as your Python script
+            extractor = await window.aiPipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2');
+            statusMsg.innerText = "Model Ready. Please upload a .txt file.";
+        } catch (err) {
+            statusMsg.innerText = "Error loading model: " + err.message;
+            console.error(err);
+        }
+    })();
+
+    // --- 2. Event Listener ---
+    fileInput.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        if (!extractor) {
+            alert("Model is still loading. Please wait a moment.");
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = async (event) => {
+            const text = event.target.result;
+            await processText(text);
+        };
+        reader.readAsText(file);
+    });
+
+    // --- 3. Core Processing Logic ---
+    async function processText(text) {
+        // Reset UI
+        resultsArea.style.display = 'none';
+        loadingBar.style.display = 'block';
+        progressBar.style.width = '0%';
+        statusMsg.innerText = "Segmenting text...";
+
+        // A. Segmentation (Simple sentence splitting by regex, similar to Python script)
+        // Note: This matches "sentence_transformers" logic roughly
+        let sentences = text.match(/[^.!?\n]+[.!?\n]+/g) || [text];
+        sentences = sentences.map(s => s.trim()).filter(s => s.length > 5); // Filter tiny garbage
+
+        if (sentences.length < 5) {
+            statusMsg.innerText = "Error: Text is too short (needs at least 5 sentences).";
+            loadingBar.style.display = 'none';
+            return;
+        }
+
+        // B. Embeddings Calculation
+        statusMsg.innerText = `Calculating Embeddings for ${sentences.length} sentences...`;
+        let embeddings = [];
+        
+        for (let i = 0; i < sentences.length; i++) {
+            // Update progress bar
+            let progress = Math.round((i / sentences.length) * 100);
+            progressBar.style.width = `${progress}%`;
+            
+            // Generate embedding
+            // output is a Tensor, we need the data array
+            let output = await extractor(sentences[i], { pooling: 'mean', normalize: true });
+            embeddings.push(output.data);
+            
+            // Allow UI to breathe
+            if(i % 5 === 0) await new Promise(r => setTimeout(r, 0));
+        }
+
+        // C. Calculate Semantic Steps (Cosine Distance)
+        statusMsg.innerText = "Calculating Semantic Rheology...";
+        let stepDistances = []; // y_cosine
+        let cumulativeCosine = [0]; // x for ADEV
+        let labels = [];
+
+        // Pre-calculate norms and dots
+        for (let i = 1; i < embeddings.length; i++) {
+            let vecA = embeddings[i-1];
+            let vecB = embeddings[i];
+            
+            // Dot product (vectors are already normalized by the model pipeline)
+            let dot = 0;
+            for(let k=0; k<vecA.length; k++) {
+                dot += vecA[k] * vecB[k];
+            }
+            
+            // Cosine Distance = 1 - Cosine Similarity
+            // Clamp dot to [-1, 1] to avoid float errors
+            let similarity = Math.max(-1, Math.min(1, dot));
+            let distance = 1 - similarity;
+            
+            stepDistances.push(distance);
+            cumulativeCosine.push(cumulativeCosine[i-1] + distance);
+            labels.push(i);
+        }
+
+        // D. Calculate Allan Deviation (Porting MATLAB logic)
+        statusMsg.innerText = "Calculating Allan Deviation...";
+        const N = cumulativeCosine.length;
+        const max_m = Math.floor(N / 2) - 1;
+        
+        // Generate Logarithmic Tau values
+        let m_values = new Set();
+        let logMax = Math.log10(max_m);
+        for(let i=0; i<50; i++) {
+            let val = Math.round(Math.pow(10, (i/49) * logMax));
+            if (val >= 1 && val <= max_m) m_values.add(val);
+        }
+        let mArray = Array.from(m_values).sort((a,b) => a - b);
+
+        let tauAxis = [];
+        let adevValues = [];
+
+        for (let m of mArray) {
+            let tau = m; // assuming tau0 = 1 step
+            let sumSq = 0;
+            let count = 0;
+
+            // Overlapping Allan Deviation Formula
+            // sum of (x[i + 2m] - 2x[i + m] + x[i])^2
+            for (let i = 0; i < (N - 2 * m); i++) {
+                let secondDiff = cumulativeCosine[i + 2*m] - 2 * cumulativeCosine[i + m] + cumulativeCosine[i];
+                sumSq += Math.pow(secondDiff, 2);
+                count++;
+            }
+
+            if (count > 0) {
+                let denominator = 2 * count * Math.pow(tau, 2);
+                let sigma = Math.sqrt(sumSq / denominator);
+                tauAxis.push(tau);
+                adevValues.push(sigma);
+            }
+        }
+
+        // E. Render Visuals
+        renderDistanceChart(labels, stepDistances);
+        renderAdevChart(tauAxis, adevValues);
+        renderDivergencePanel(sentences, stepDistances);
+
+        // Finish
+        statusMsg.innerText = "Analysis Complete.";
+        loadingBar.style.display = 'none';
+        resultsArea.style.display = 'grid';
+    }
+
+    // --- 4. Visualization Functions ---
+
+    let distChartInstance = null;
+    let adevChartInstance = null;
+
+    // --- FIXED: Chart Configuration ---
+    // We added 'maintainAspectRatio: true' and 'aspectRatio: 2' 
+    // to stop the charts from growing infinitely.
+
+    function renderDistanceChart(labels, data) {
+        const ctx = document.getElementById('distanceChart').getContext('2d');
+        if (distChartInstance) distChartInstance.destroy();
+
+        distChartInstance = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Step Cosine Distance',
+                    data: data,
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1,
+                    pointRadius: 2,
+                    fill: false,
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true, // Stops expansion
+                aspectRatio: 2,            // 2:1 width-to-height ratio (Widescreen)
+                scales: {
+                    x: { title: { display: true, text: 'Sentence Index' } },
+                    y: { title: { display: true, text: 'Semantic Distance' }, beginAtZero: true }
+                }
+            }
+        });
+    }
+
+    function renderAdevChart(tau, adev) {
+        const ctx = document.getElementById('adevChart').getContext('2d');
+        if (adevChartInstance) adevChartInstance.destroy();
+
+        // Calculate reference line (slope -0.5)
+        const startY = adev[0];
+        const startX = tau[0];
+        // y = k * x^(-0.5)
+        const refY = tau.map(x => startY * Math.pow(x / startX, -0.5));
+
+        adevChartInstance = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: tau, 
+                datasets: [
+                    {
+                        label: 'Allan Deviation',
+                        data: tau.map((t, i) => ({x: t, y: adev[i]})),
+                        borderColor: 'blue',
+                        backgroundColor: 'blue',
+                        showLine: true,
+                        pointRadius: 3
+                    },
+                    {
+                        label: 'Reference (Slope -0.5)',
+                        data: tau.map((t, i) => ({x: t, y: refY[i]})),
+                        borderColor: 'red',
+                        borderDash: [5, 5],
+                        pointRadius: 0,
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true, // Stops expansion
+                aspectRatio: 2,            // 2:1 width-to-height ratio
+                scales: {
+                    x: { 
+                        type: 'logarithmic', 
+                        title: { display: true, text: 'Averaging Time (tau)' } 
+                    },
+                    y: { 
+                        type: 'logarithmic', 
+                        title: { display: true, text: 'Allan Deviation sigma(tau)' } 
+                    }
+                }
+            }
+        });
+    }
+
+    function renderDivergencePanel(sentences, distances) {
+        divergenceList.innerHTML = '';
+        
+        let map = distances.map((d, i) => ({
+            index: i,
+            dist: d,
+            textA: sentences[i],
+            textB: sentences[i+1]
+        }));
+
+        map.sort((a, b) => b.dist - a.dist);
+        const top5 = map.slice(0, 5);
+
+        top5.forEach(item => {
+            const div = document.createElement('div');
+            div.className = 'divergence-item';
+            div.innerHTML = `
+                <span class="divergence-score">Distance: ${item.dist.toFixed(4)} (Index ${item.index} -> ${item.index+1})</span>
+                <strong>A:</strong> ${item.textA}<br>
+                <div style="height:5px;"></div>
+                <strong>B:</strong> ${item.textB}
+            `;
+            divergenceList.appendChild(div);
+        });
+    }
+
+</script>
+
+</body>
+</html>
