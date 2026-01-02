@@ -1,27 +1,145 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <title>Xortical</title>
-  <!-- Style to create button -->
-  <style>
-    .buttonStyle {
-        background-color: white;
-        border: 2px solid black;
-        color: green;
-        padding: 5px 10px;
-        text-align: center;
-        display: inline-block;
-        font-size: 20px;
-        margin: 10px 30px;
-        cursor: pointer;
-        text-decoration:none;
-    }
-</style>
-</head>
-<body>
-  <button onclick="window.location.href='rppg.html'" class="buttonStyle">Heartrate Measurement</button>
-  <button onclick="window.location.href='dapp.html'" class="buttonStyle">Ethereum Based TreaasureHunt</button>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Debayan Dasgupta</title>
 
+  <meta name="description" content="Researcher in nanorobotics, active matter, and biomedical microrobots. Founder at Theranautilus." />
+
+  <style>
+    :root {
+      --bg: #0f1220;
+      --fg: #eaeaf0;
+      --muted: #a5a7c0;
+      --accent: #7dd3fc;
+      --card: #171a2e;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(1200px 800px at 20% 10%, #1b2040, var(--bg));
+      color: var(--fg);
+      line-height: 1.6;
+    }
+
+    .container {
+      max-width: 900px;
+      padding: 4rem 1.5rem;
+      margin: auto;
+    }
+
+    h1 {
+      font-size: clamp(2.2rem, 4vw, 3rem);
+      margin-bottom: 0.2rem;
+      letter-spacing: -0.02em;
+    }
+
+    h2 {
+      margin-top: 3rem;
+      font-size: 1.4rem;
+      color: var(--accent);
+    }
+
+    p {
+      max-width: 720px;
+      color: var(--muted);
+    }
+
+    .subtitle {
+      font-size: 1.1rem;
+      color: var(--muted);
+      margin-bottom: 2rem;
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-top: 1.5rem;
+    }
+
+    a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    .links a {
+      margin-right: 1.2rem;
+      white-space: nowrap;
+    }
+
+    footer {
+      margin-top: 4rem;
+      font-size: 0.85rem;
+      color: #7b7da6;
+    }
+  </style>
+</head>
+
+<body>
+  <main class="container">
+    <h1>Debayan Dasgupta</h1>
+    <div class="subtitle">
+      Nanorobotics · Active Matter · Biomedical Micromachines
+    </div>
+
+    <p>
+      I work at the intersection of physics, nanotechnology, and biology, building
+      <strong>magnetically driven microrobots</strong> that can move, sense, and interact with
+      complex biological environments.
+    </p>
+
+    <p>
+      My research explores how active systems behave inside cells, tissues, and porous
+      biological structures and how those dynamics can be translated into
+      <em>minimally invasive medical technologies</em>.
+    </p>
+
+    <div class="card">
+      <h2>What I Do</h2>
+      <p>
+        • Magnetic nanorobots and helical microswimmers<br/>
+        • Active matter and stochastic dynamics<br/>
+        • Rheology of biological and soft materials<br/>
+        • Image-based biophysics and computational analysis<br/>
+        • Translation of deep-tech research into clinical tools
+      </p>
+    </div>
+
+    <div class="card">
+      <h2>Startup</h2>
+      <p>
+        I am a co-founder of <strong>Theranautilus</strong>, a deep-tech startup developing
+        nanorobotic systems for oncology treatments and regenerative medicine.
+        Our work focuses on reaching anatomical regions inaccessible to
+        conventional tools and deliver medicaments precisely.
+      </p>
+    </div>
+
+    <div class="card">
+      <h2>Links</h2>
+      <div class="links">
+        <a href="https://scholar.google.com/citations?user=wsMAWL0AAAAJ" target="_blank">Google Scholar</a>
+        <a href="https://www.linkedin.com/in/debayan-dasgupta-b2360856/" target="_blank">LinkedIn</a>
+        <a href="mailto:debayan@theranautilus.com">Email</a>
+      </div>
+    </div>
+
+    <footer>
+      © <span id="year"></span> Debayan Dasgupta
+    </footer>
+  </main>
+
+  <script>
+    document.getElementById("year").textContent = new Date().getFullYear();
+  </script>
 </body>
 </html>
